@@ -1,0 +1,500 @@
+// ============================================================================
+//  Enterprise Asset Management System (EAMS) — Prisma Schema
+//  PostgreSQL · Multi-tenant · RBAC · Full asset lifecycle
+// ============================================================================
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ----------------------------------------------------------------------------
+//  Enums
+// ----------------------------------------------------------------------------
+enum AssetStatus {
+  AVAILABLE
+  ASSIGNED
+  IN_MAINTENANCE
+  IN_TRANSIT
+  RESERVED
+  RETIRED
+  DISPOSED
+  LOST
+  DAMAGED
+}
+
+enum AssetCondition {
+  NEW
+  EXCELLENT
+  GOOD
+  FAIR
+  POOR
+}
+
+enum AssignmentStatus {
+  ACTIVE
+  RETURNED
+  OVERDUE
+  LOST
+}
+
+enum MaintenanceType {
+  PREVENTIVE
+  CORRECTIVE
+  AMC
+  WARRANTY_CLAIM
+  INSPECTION
+}
+
+enum MaintenanceStatus {
+  SCHEDULED
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
+}
+
+enum RequestType {
+  NEW_ASSET
+  REPLACEMENT
+  RETURN
+  REPAIR
+}
+
+enum RequestStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  FULFILLED
+  CANCELLED
+}
+
+enum PurchaseOrderStatus {
+  DRAFT
+  SUBMITTED
+  APPROVED
+  ORDERED
+  PARTIALLY_RECEIVED
+  RECEIVED
+  CANCELLED
+}
+
+enum DepreciationMethod {
+  STRAIGHT_LINE
+  DECLINING_BALANCE
+  NONE
+}
+
+enum NotificationType {
+  INFO
+  SUCCESS
+  WARNING
+  ALERT
+}
+
+// ----------------------------------------------------------------------------
+//  Tenancy & Access Control
+// ----------------------------------------------------------------------------
+model Organization {
+  id        String   @id @default(cuid())
+  name      String
+  code      String   @unique
+  domain    String?
+  logoUrl   String?
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  users        User[]
+  departments  Department[]
+  locations    Location[]
+  categories   Category[]
+  vendors      Vendor[]
+  employees    Employee[]
+  assets       Asset[]
+  roles        Role[]
+}
+
+model Role {
+  id             String   @id @default(cuid())
+  organizationId String
+  name           String
+  description    String?
+  isSystem       Boolean  @default(false)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  organization Organization     @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  users        User[]
+  permissions  RolePermission[]
+
+  @@unique([organizationId, name])
+}
+
+model Permission {
+  id          String  @id @default(cuid())
+  key         String  @unique // e.g. "asset:create", "asset:read"
+  module      String
+  description String?
+
+  roles RolePermission[]
+}
+
+model RolePermission {
+  roleId       String
+  permissionId String
+
+  role       Role       @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  permission Permission @relation(fields: [permissionId], references: [id], onDelete: Cascade)
+
+  @@id([roleId, permissionId])
+}
+
+model User {
+  id             String    @id @default(cuid())
+  organizationId String
+  name           String
+  email          String    @unique
+  passwordHash   String
+  roleId         String
+  departmentId   String?
+  locationId     String?
+  avatarUrl      String?
+  phone          String?
+  isActive       Boolean   @default(true)
+  ssoProvider    String? // e.g. "entra-id"
+  lastLoginAt    DateTime?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  role         Role         @relation(fields: [roleId], references: [id])
+  department   Department?  @relation(fields: [departmentId], references: [id])
+  location     Location?    @relation(fields: [locationId], references: [id])
+
+  auditLogs          AuditLog[]
+  notifications      Notification[]
+  approvedRequests   AssetRequest[]    @relation("RequestApprover")
+  assignmentsCreated AssetAssignment[] @relation("AssignmentCreatedBy")
+
+  @@index([organizationId])
+  @@index([roleId])
+}
+
+// ----------------------------------------------------------------------------
+//  Organizational structure
+// ----------------------------------------------------------------------------
+model Department {
+  id             String   @id @default(cuid())
+  organizationId String
+  name           String
+  code           String
+  costCenter     String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  employees    Employee[]
+  users        User[]
+
+  @@unique([organizationId, code])
+}
+
+model Location {
+  id             String   @id @default(cuid())
+  organizationId String
+  name           String
+  code           String
+  type           String? // HQ, BRANCH, WAREHOUSE, REMOTE
+  address        String?
+  city           String?
+  country        String?
+  latitude       Float?
+  longitude      Float?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  employees    Employee[]
+  users        User[]
+  assets       Asset[]
+
+  @@unique([organizationId, code])
+}
+
+model Employee {
+  id             String   @id @default(cuid())
+  organizationId String
+  employeeCode   String
+  name           String
+  email          String
+  phone          String?
+  designation    String?
+  departmentId   String?
+  locationId     String?
+  managerId      String?
+  avatarUrl      String?
+  isActive       Boolean  @default(true)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  department   Department?  @relation(fields: [departmentId], references: [id])
+  location     Location?    @relation(fields: [locationId], references: [id])
+  manager      Employee?    @relation("EmployeeManager", fields: [managerId], references: [id])
+  reports      Employee[]   @relation("EmployeeManager")
+
+  assignedAssets Asset[]
+  assignments    AssetAssignment[]
+  requests       AssetRequest[]
+
+  @@unique([organizationId, employeeCode])
+  @@index([organizationId])
+}
+
+// ----------------------------------------------------------------------------
+//  Procurement & vendors
+// ----------------------------------------------------------------------------
+model Vendor {
+  id             String   @id @default(cuid())
+  organizationId String
+  vendorName     String
+  code           String
+  contactPerson  String?
+  email          String?
+  phone          String?
+  address        String?
+  website        String?
+  rating         Float?   @default(0)
+  isActive       Boolean  @default(true)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  organization   Organization        @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  assets         Asset[]
+  maintenance    MaintenanceRecord[]
+  purchaseOrders PurchaseOrder[]
+
+  @@unique([organizationId, code])
+}
+
+model PurchaseOrder {
+  id             String              @id @default(cuid())
+  poNumber       String              @unique
+  vendorId       String
+  status         PurchaseOrderStatus @default(DRAFT)
+  orderDate      DateTime            @default(now())
+  expectedDate   DateTime?
+  totalAmount    Float               @default(0)
+  currency       String              @default("USD")
+  notes          String?
+  createdAt      DateTime            @default(now())
+  updatedAt      DateTime            @updatedAt
+
+  vendor Vendor              @relation(fields: [vendorId], references: [id])
+  items  PurchaseOrderItem[]
+}
+
+model PurchaseOrderItem {
+  id              String  @id @default(cuid())
+  purchaseOrderId String
+  description     String
+  quantity        Int     @default(1)
+  unitPrice       Float   @default(0)
+
+  purchaseOrder PurchaseOrder @relation(fields: [purchaseOrderId], references: [id], onDelete: Cascade)
+}
+
+// ----------------------------------------------------------------------------
+//  Asset catalog & lifecycle
+// ----------------------------------------------------------------------------
+model Category {
+  id                 String             @id @default(cuid())
+  organizationId     String
+  name               String
+  code               String
+  description        String?
+  parentId           String?
+  depreciationMethod DepreciationMethod @default(STRAIGHT_LINE)
+  depreciationRate   Float              @default(0) // % per year
+  usefulLifeYears    Int                @default(5)
+  icon               String?
+  createdAt          DateTime           @default(now())
+  updatedAt          DateTime           @updatedAt
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  parent       Category?    @relation("CategoryTree", fields: [parentId], references: [id])
+  children     Category[]   @relation("CategoryTree")
+  assets       Asset[]
+
+  @@unique([organizationId, code])
+}
+
+model Asset {
+  id                 String             @id @default(cuid())
+  organizationId     String
+  assetCode          String
+  name               String
+  description        String?
+  categoryId         String
+  serialNumber       String?
+  manufacturer       String?
+  model              String?
+  qrCode             String? // unique scan token
+  barcode            String?
+  rfidTag            String?
+  purchaseDate       DateTime?
+  purchaseCost       Float              @default(0)
+  currentValue       Float              @default(0)
+  salvageValue       Float              @default(0)
+  depreciationMethod DepreciationMethod @default(STRAIGHT_LINE)
+  usefulLifeYears    Int                @default(5)
+  vendorId           String?
+  warrantyExpiry     DateTime?
+  amcExpiry          DateTime?
+  status             AssetStatus        @default(AVAILABLE)
+  condition          AssetCondition     @default(NEW)
+  locationId         String?
+  assignedToId       String?
+  specifications     Json?
+  imageUrl           String?
+  notes              String?
+  createdAt          DateTime           @default(now())
+  updatedAt          DateTime           @updatedAt
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  category     Category     @relation(fields: [categoryId], references: [id])
+  vendor       Vendor?      @relation(fields: [vendorId], references: [id])
+  location     Location?    @relation(fields: [locationId], references: [id])
+  assignedTo   Employee?    @relation(fields: [assignedToId], references: [id])
+
+  assignments AssetAssignment[]
+  maintenance MaintenanceRecord[]
+
+  @@unique([organizationId, assetCode])
+  @@index([organizationId, status])
+  @@index([categoryId])
+  @@index([qrCode])
+}
+
+model AssetAssignment {
+  id                 String           @id @default(cuid())
+  assetId            String
+  employeeId         String
+  assignedById       String?
+  assignedDate       DateTime         @default(now())
+  expectedReturnDate DateTime?
+  actualReturnDate   DateTime?
+  status             AssignmentStatus @default(ACTIVE)
+  conditionOnAssign  AssetCondition?
+  conditionOnReturn  AssetCondition?
+  notes              String?
+  createdAt          DateTime         @default(now())
+  updatedAt          DateTime         @updatedAt
+
+  asset      Asset     @relation(fields: [assetId], references: [id], onDelete: Cascade)
+  employee   Employee  @relation(fields: [employeeId], references: [id])
+  assignedBy User?     @relation("AssignmentCreatedBy", fields: [assignedById], references: [id])
+
+  @@index([assetId])
+  @@index([employeeId])
+  @@index([status])
+}
+
+model MaintenanceRecord {
+  id            String            @id @default(cuid())
+  assetId       String
+  vendorId      String?
+  type          MaintenanceType
+  status        MaintenanceStatus @default(SCHEDULED)
+  title         String
+  description   String?
+  scheduledDate DateTime?
+  completedDate DateTime?
+  nextDueDate   DateTime?
+  cost          Float             @default(0)
+  performedBy   String?
+  createdAt     DateTime          @default(now())
+  updatedAt     DateTime          @updatedAt
+
+  asset  Asset   @relation(fields: [assetId], references: [id], onDelete: Cascade)
+  vendor Vendor? @relation(fields: [vendorId], references: [id])
+
+  @@index([assetId])
+  @@index([status])
+}
+
+model AssetRequest {
+  id           String        @id @default(cuid())
+  requestCode  String        @unique
+  employeeId   String
+  type         RequestType   @default(NEW_ASSET)
+  categoryName String?
+  justification String?
+  status       RequestStatus @default(PENDING)
+  approvedById String?
+  approverNote String?
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+
+  employee   Employee @relation(fields: [employeeId], references: [id])
+  approvedBy User?    @relation("RequestApprover", fields: [approvedById], references: [id])
+
+  @@index([status])
+}
+
+// ----------------------------------------------------------------------------
+//  Cross-cutting: audit, notifications, attachments
+// ----------------------------------------------------------------------------
+model AuditLog {
+  id        String   @id @default(cuid())
+  userId    String?
+  actorName String?
+  action    String // CREATE / UPDATE / DELETE / LOGIN / ASSIGN ...
+  module    String
+  entity    String
+  entityId  String?
+  summary   String?
+  metadata  Json?
+  ipAddress String?
+  userAgent String?
+  createdAt DateTime @default(now())
+
+  user User? @relation(fields: [userId], references: [id])
+
+  @@index([module])
+  @@index([entity, entityId])
+  @@index([createdAt])
+}
+
+model Notification {
+  id        String           @id @default(cuid())
+  userId    String
+  title     String
+  message   String
+  type      NotificationType @default(INFO)
+  link      String?
+  isRead    Boolean          @default(false)
+  createdAt DateTime         @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, isRead])
+}
+
+model Attachment {
+  id           String   @id @default(cuid())
+  entity       String
+  entityId     String
+  fileName     String
+  fileUrl      String
+  mimeType     String?
+  size         Int?
+  uploadedById String?
+  createdAt    DateTime @default(now())
+
+  @@index([entity, entityId])
+}
