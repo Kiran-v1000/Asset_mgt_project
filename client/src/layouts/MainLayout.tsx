@@ -3,6 +3,7 @@ import { Outlet, useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Sidebar } from '../components/layout/Sidebar';
 import { Topbar } from '../components/layout/Topbar';
+import { CommandPalette } from '../components/common/CommandPalette';
 
 export function MainLayout() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -10,6 +11,7 @@ export function MainLayout() {
 
   return (
     <div className="flex h-full">
+      <CommandPalette />
       <Sidebar open={sidebarOpen} onClose={() => setSidebarOpen(false)} />
       <div className="flex min-w-0 flex-1 flex-col">
         <Topbar onMenu={() => setSidebarOpen(true)} />

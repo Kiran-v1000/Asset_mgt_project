@@ -47,6 +47,13 @@ plus resource-specific filters.
 | POST | `/assignments` | `asset:assign` | atomic: creates assignment + sets asset `ASSIGNED` |
 | POST | `/assignments/:id/return` | `asset:assign` | atomic: closes assignment + frees asset |
 
+## Reservations
+| Method | Path | Permission | Notes |
+|--------|------|-----------|-------|
+| GET | `/reservations` | `asset:view` | filter: `status` |
+| POST | `/reservations` | `asset:assign` | atomic: creates reservation + sets asset `RESERVED` |
+| POST | `/reservations/:id/cancel` | `asset:assign` | atomic: cancels + frees asset to `AVAILABLE` |
+
 ## Catalog & Procurement & People
 | Resource | Path | View | Manage |
 |----------|------|------|--------|

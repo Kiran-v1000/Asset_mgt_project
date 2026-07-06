@@ -15,7 +15,7 @@ export const createResourceApi = <T>(path: string) => ({
 // Concrete resource clients
 import type {
   Asset, Assignment, AuditLog, Category, Department, Employee, Location,
-  MaintenanceRecord, AppUser, Vendor, AssetRequest, RoleSummary,
+  MaintenanceRecord, AppUser, Vendor, AssetRequest, RoleSummary, Reservation,
 } from '../utils/types';
 
 export const assetApi = createResourceApi<Asset>('assets');
@@ -39,4 +39,10 @@ export const assignmentActions = {
 
 export const roleApi = {
   list: () => http.get<RoleSummary[]>('/roles').then((r) => r.data),
+};
+
+export const reservationApi = createResourceApi<Reservation>('reservations');
+export const reservationActions = {
+  reserve: (data: Params) => http.post<Reservation>('/reservations', data).then((r) => r.data),
+  cancel: (id: string) => http.post<Reservation>(`/reservations/${id}/cancel`, {}).then((r) => r.data),
 };

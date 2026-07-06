@@ -7,6 +7,7 @@ import { PERMISSIONS } from '../models/permissions.js';
 import { authController } from '../controllers/authController.js';
 import { assetController } from '../controllers/assetController.js';
 import { assignmentController } from '../controllers/assignmentController.js';
+import { reservationController } from '../controllers/reservationController.js';
 import { dashboardController } from '../controllers/dashboardController.js';
 import { auditController } from '../controllers/auditController.js';
 import { userController } from '../controllers/userController.js';
@@ -15,6 +16,7 @@ import { resourceRouters } from './crudRoutes.js';
 import { loginSchema } from '../validations/authValidation.js';
 import { createAssetSchema, updateAssetSchema } from '../validations/assetValidation.js';
 import { assignAssetSchema, returnAssetSchema } from '../validations/assignmentValidation.js';
+import { reserveSchema } from '../validations/reservationValidation.js';
 
 const router = Router();
 
@@ -42,6 +44,11 @@ router.delete('/assets/:id', requirePermission(PERMISSIONS.ASSET_DELETE.key), as
 router.get('/assignments', requirePermission(PERMISSIONS.ASSET_VIEW.key), assignmentController.list);
 router.post('/assignments', requirePermission(PERMISSIONS.ASSET_ASSIGN.key), validate({ body: assignAssetSchema }), assignmentController.assign);
 router.post('/assignments/:id/return', requirePermission(PERMISSIONS.ASSET_ASSIGN.key), validate({ body: returnAssetSchema }), assignmentController.return);
+
+// Reservations
+router.get('/reservations', requirePermission(PERMISSIONS.ASSET_VIEW.key), reservationController.list);
+router.post('/reservations', requirePermission(PERMISSIONS.ASSET_ASSIGN.key), validate({ body: reserveSchema }), reservationController.reserve);
+router.post('/reservations/:id/cancel', requirePermission(PERMISSIONS.ASSET_ASSIGN.key), reservationController.cancel);
 
 // Audit & compliance
 router.get('/audit-logs', requirePermission(PERMISSIONS.AUDIT_VIEW.key), auditController.list);

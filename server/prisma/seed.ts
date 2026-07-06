@@ -23,6 +23,7 @@ async function main() {
     prisma.assetAssignment.deleteMany(),
     prisma.maintenanceRecord.deleteMany(),
     prisma.assetRequest.deleteMany(),
+    prisma.reservation.deleteMany(),
     prisma.asset.deleteMany(),
     prisma.purchaseOrderItem.deleteMany(),
     prisma.purchaseOrder.deleteMany(),
@@ -282,6 +283,21 @@ async function main() {
         status: pick([...rStatuses]),
       },
     });
+  }
+
+  // ---- Reservations (hold a few available assets) ----
+  const reservable = assets.filter((a) => a.status === 'AVAILABLE').slice(0, 4);
+  for (const asset of reservable) {
+    await prisma.reservation.create({
+      data: {
+        assetId: asset.id,
+        employeeId: pick(employees).id,
+        reservedForDate: daysFromNow(rnd(3, 30)),
+        status: 'RESERVED',
+        createdById: adminUser?.id,
+      },
+    });
+    await prisma.asset.update({ where: { id: asset.id }, data: { status: 'RESERVED' } });
   }
 
   // ---- Seed an initial audit trail ----

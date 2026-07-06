@@ -49,10 +49,33 @@ const RESOURCES: Record<string, { key: keyof MockDB; search: string[]; filters?:
   'audit-logs': { key: 'auditLogs', search: ['actorName', 'summary', 'entity'], filters: ['module'] },
 };
 
+// Link the demo principal to an employee that actually holds assets, so the
+// self-service "My Assets" portal always has data to show.
+const selfEmployee =
+  db.employees.find((e) => db.assignments.some((a) => a.status === 'ACTIVE' && a.employee?.id === e.id)) ??
+  db.employees[0];
+
 const me = {
   id: 'usr_me', name: 'System Administrator', email: 'admin@eams.io', avatarUrl: null,
   role: { id: 'rol_sa', name: 'Super Admin' }, organizationId: 'org_demo', permissions: ALL_PERMISSIONS,
+  employeeId: selfEmployee.id, employeeName: selfEmployee.name,
 };
+
+// ---- Reservations (in-memory) ----
+interface MockReservation {
+  id: string; status: string; reservedForDate?: string; notes?: string; createdAt: string;
+  asset?: { id: string; name: string; assetCode: string };
+  employee?: { id: string; name: string; employeeCode: string };
+}
+const reservations: MockReservation[] = db.assets
+  .filter((a) => a.status === 'RESERVED')
+  .slice(0, 4)
+  .map((a) => ({
+    id: newId('rsv'), status: 'RESERVED', reservedForDate: new Date(Date.now() + 7 * 86400000).toISOString(),
+    createdAt: new Date().toISOString(),
+    asset: { id: a.id, name: a.name, assetCode: a.assetCode },
+    employee: { id: selfEmployee.id, name: selfEmployee.name, employeeCode: selfEmployee.employeeCode },
+  }));
 
 const dashboardOverview = () => {
   const a = db.assets;
@@ -149,6 +172,36 @@ export async function mockHandle<T>(req: Req): Promise<ApiEnvelope<T>> {
       const asset = db.assets.find((a) => a.id === asg.asset?.id);
       if (asset) { asset.status = 'AVAILABLE'; asset.assignedTo = null; }
       return { success: true, data: asg as T };
+    }
+  }
+
+  // ---- Reservations ----
+  if (seg[0] === 'reservations') {
+    if (method === 'get' && seg.length === 1) {
+      return paginate(reservations as unknown as Record<string, unknown>[], params, [], ['status']) as ApiEnvelope<T>;
+    }
+    if (method === 'post' && seg.length === 1) {
+      const asset = db.assets.find((a) => a.id === data.assetId);
+      if (asset) {
+        asset.status = 'RESERVED';
+        const row: MockReservation = {
+          id: newId('rsv'), status: 'RESERVED', reservedForDate: data.reservedForDate as string,
+          notes: data.notes as string, createdAt: new Date().toISOString(),
+          asset: { id: asset.id, name: asset.name, assetCode: asset.assetCode },
+          employee: { id: selfEmployee.id, name: selfEmployee.name, employeeCode: selfEmployee.employeeCode },
+        };
+        reservations.unshift(row);
+        return { success: true, data: row as T };
+      }
+    }
+    if (method === 'post' && seg[2] === 'cancel') {
+      const r = reservations.find((x) => x.id === seg[1]);
+      if (r) {
+        r.status = 'CANCELLED';
+        const asset = db.assets.find((a) => a.id === r.asset?.id);
+        if (asset && asset.status === 'RESERVED') asset.status = 'AVAILABLE';
+        return { success: true, data: r as T };
+      }
     }
   }
 

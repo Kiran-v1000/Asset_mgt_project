@@ -1,6 +1,7 @@
 import {
   LayoutDashboard, Boxes, Tags, ArrowLeftRight, Users, Store, FileText,
-  Wrench, ShieldCheck, BarChart3, Settings, type LucideIcon,
+  Wrench, ShieldCheck, BarChart3, Settings, Sparkles, LayoutGrid, CalendarCheck,
+  type LucideIcon,
 } from 'lucide-react';
 
 export interface NavItem {
@@ -18,7 +19,11 @@ export interface NavGroup {
 export const NAV: NavGroup[] = [
   {
     title: 'Overview',
-    items: [{ label: 'Dashboard', to: '/dashboard', icon: LayoutDashboard, permission: 'dashboard:view' }],
+    items: [
+      { label: 'Dashboard', to: '/dashboard', icon: LayoutDashboard, permission: 'dashboard:view' },
+      { label: 'My Workspace', to: '/my-assets', icon: LayoutGrid, permission: 'asset:view' },
+      { label: 'Smart Insights', to: '/insights', icon: Sparkles, permission: 'report:view' },
+    ],
   },
   {
     title: 'Asset Management',
@@ -26,6 +31,7 @@ export const NAV: NavGroup[] = [
       { label: 'Assets', to: '/assets', icon: Boxes, permission: 'asset:view' },
       { label: 'Categories', to: '/categories', icon: Tags, permission: 'asset:view' },
       { label: 'Assignments', to: '/assignments', icon: ArrowLeftRight, permission: 'asset:view' },
+      { label: 'Reservations', to: '/reservations', icon: CalendarCheck, permission: 'asset:view' },
     ],
   },
   {

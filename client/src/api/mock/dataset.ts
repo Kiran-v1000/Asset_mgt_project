@@ -116,6 +116,7 @@ export const buildDataset = (): MockDB => {
       serialNumber: `SN${Math.random().toString(36).slice(2, 10).toUpperCase()}`, manufacturer: vendor.vendorName, model,
       qrCode: Math.random().toString(36).slice(2), barcode: String(rnd(1e12, 9e12)),
       purchaseDate: iso(monthsAgo(ageMonths)), purchaseCost, currentValue,
+      depreciationRate: category.depreciationRate, usefulLifeYears: category.usefulLifeYears,
       warrantyExpiry: iso(daysFromNow(rnd(-120, 400))), amcExpiry: iso(daysFromNow(rnd(-60, 365))),
       status: pick(statuses), condition: pick(conditions), assignedTo: null, createdAt: iso(monthsAgo(ageMonths)),
     };

@@ -1,12 +1,15 @@
 import { useState } from 'react';
-import { Menu, Search, Bell, LogOut, ChevronDown } from 'lucide-react';
+import { Menu, Search, LogOut, ChevronDown } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuthStore } from '../../store/authStore';
+import { useUIStore } from '../../store/uiStore';
 import { Avatar } from '../ui/Avatar';
+import { NotificationsMenu } from './NotificationsMenu';
 
 export function Topbar({ onMenu }: { onMenu: () => void }) {
   const user = useAuthStore((s) => s.user);
   const logout = useAuthStore((s) => s.logout);
+  const openCommand = useUIStore((s) => s.setCommandOpen);
   const [menuOpen, setMenuOpen] = useState(false);
 
   return (
@@ -15,19 +18,20 @@ export function Topbar({ onMenu }: { onMenu: () => void }) {
         <Menu className="h-5 w-5" />
       </button>
 
-      <div className="relative hidden max-w-md flex-1 sm:block">
+      <button
+        onClick={() => openCommand(true)}
+        className="group relative hidden max-w-md flex-1 items-center gap-2 rounded-xl border border-white/10 bg-ink-900/60 py-2 pl-10 pr-3 text-left text-sm text-slate-500 transition hover:border-brand-500/40 sm:flex"
+      >
         <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-500" />
-        <input
-          placeholder="Search assets, people, vendors…"
-          className="w-full rounded-xl border border-white/10 bg-ink-900/60 py-2 pl-10 pr-4 text-sm text-slate-200 placeholder:text-slate-500 focus:border-brand-500/50 focus:outline-none focus:ring-2 focus:ring-brand-500/20"
-        />
-      </div>
+        <span className="flex-1">Search assets, people, vendors…</span>
+        <kbd className="rounded-md bg-white/5 px-1.5 py-0.5 text-[10px] text-slate-400 ring-1 ring-white/10">⌘K</kbd>
+      </button>
 
       <div className="ml-auto flex items-center gap-2">
-        <button className="relative rounded-xl p-2.5 text-slate-400 hover:bg-white/10">
-          <Bell className="h-5 w-5" />
-          <span className="absolute right-2 top-2 h-2 w-2 rounded-full bg-accent-rose ring-2 ring-ink-950" />
+        <button onClick={() => openCommand(true)} className="rounded-xl p-2.5 text-slate-400 hover:bg-white/10 sm:hidden">
+          <Search className="h-5 w-5" />
         </button>
+        <NotificationsMenu />
 
         <div className="relative">
           <button

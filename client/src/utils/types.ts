@@ -20,6 +20,27 @@ export interface AuthUser {
   role: { id: string; name: string };
   organizationId: string;
   permissions: string[];
+  employeeId?: string;
+  employeeName?: string;
+}
+
+export interface Reservation {
+  id: string;
+  status: 'RESERVED' | 'CANCELLED' | 'FULFILLED';
+  reservedForDate?: string;
+  notes?: string;
+  createdAt: string;
+  asset?: { id: string; name: string; assetCode: string };
+  employee?: { id: string; name: string; employeeCode: string };
+}
+
+export interface AppNotification {
+  id: string;
+  title: string;
+  message: string;
+  type: 'INFO' | 'SUCCESS' | 'WARNING' | 'ALERT';
+  link?: string;
+  createdAt: string;
 }
 
 export type AssetStatus =
@@ -43,6 +64,8 @@ export interface Asset {
   purchaseDate?: string;
   purchaseCost: number;
   currentValue: number;
+  depreciationRate?: number;
+  usefulLifeYears?: number;
   warrantyExpiry?: string;
   amcExpiry?: string;
   status: AssetStatus;

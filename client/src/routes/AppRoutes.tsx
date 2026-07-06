@@ -6,7 +6,10 @@ import { FullScreenLoader } from '../components/ui/FullScreenLoader';
 
 const Login = lazy(() => import('../pages/Login/LoginPage'));
 const Dashboard = lazy(() => import('../pages/Dashboard/DashboardPage'));
+const MyAssets = lazy(() => import('../pages/MyAssets/MyAssetsPage'));
+const Insights = lazy(() => import('../pages/Insights/InsightsPage'));
 const Assets = lazy(() => import('../pages/Assets/AssetsPage'));
+const Reservations = lazy(() => import('../pages/Reservations/ReservationsPage'));
 const Categories = lazy(() => import('../pages/Categories/CategoriesPage'));
 const Assignments = lazy(() => import('../pages/Assignments/AssignmentsPage'));
 const Employees = lazy(() => import('../pages/Employees/EmployeesPage'));
@@ -33,9 +36,12 @@ export function AppRoutes() {
         >
           <Route index element={<Navigate to="/dashboard" replace />} />
           <Route path="/dashboard" element={<Dashboard />} />
+          <Route path="/my-assets" element={<MyAssets />} />
+          <Route path="/insights" element={<Insights />} />
           <Route path="/assets" element={<Assets />} />
           <Route path="/categories" element={<Categories />} />
           <Route path="/assignments" element={<Assignments />} />
+          <Route path="/reservations" element={<Reservations />} />
           <Route path="/employees" element={<Employees />} />
           <Route path="/vendors" element={<Vendors />} />
           <Route path="/requests" element={<Requests />} />

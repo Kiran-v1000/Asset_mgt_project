@@ -95,6 +95,12 @@ enum NotificationType {
   ALERT
 }
 
+enum ReservationStatus {
+  RESERVED
+  CANCELLED
+  FULFILLED
+}
+
 // ----------------------------------------------------------------------------
 //  Tenancy & Access Control
 // ----------------------------------------------------------------------------
@@ -250,6 +256,7 @@ model Employee {
   assignedAssets Asset[]
   assignments    AssetAssignment[]
   requests       AssetRequest[]
+  reservations   Reservation[]
 
   @@unique([organizationId, employeeCode])
   @@index([organizationId])
@@ -371,8 +378,9 @@ model Asset {
   location     Location?    @relation(fields: [locationId], references: [id])
   assignedTo   Employee?    @relation(fields: [assignedToId], references: [id])
 
-  assignments AssetAssignment[]
-  maintenance MaintenanceRecord[]
+  assignments  AssetAssignment[]
+  maintenance  MaintenanceRecord[]
+  reservations Reservation[]
 
   @@unique([organizationId, assetCode])
   @@index([organizationId, status])
@@ -443,6 +451,24 @@ model AssetRequest {
   employee   Employee @relation(fields: [employeeId], references: [id])
   approvedBy User?    @relation("RequestApprover", fields: [approvedById], references: [id])
 
+  @@index([status])
+}
+
+model Reservation {
+  id              String            @id @default(cuid())
+  assetId         String
+  employeeId      String?
+  reservedForDate DateTime?
+  status          ReservationStatus @default(RESERVED)
+  notes           String?
+  createdById     String?
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
+
+  asset    Asset     @relation(fields: [assetId], references: [id], onDelete: Cascade)
+  employee Employee? @relation(fields: [employeeId], references: [id])
+
+  @@index([assetId])
   @@index([status])
 }
 

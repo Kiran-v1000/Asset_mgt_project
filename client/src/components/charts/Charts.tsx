@@ -36,6 +36,31 @@ export function TrendArea({ data }: { data: TrendPoint[] }) {
   );
 }
 
+export function ValueProjection({ data }: { data: { month: string; value: number }[] }) {
+  return (
+    <ResponsiveContainer width="100%" height={260}>
+      <AreaChart data={data} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
+        <defs>
+          <linearGradient id="projFill" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stopColor="#22d3ee" stopOpacity={0.45} />
+            <stop offset="100%" stopColor="#22d3ee" stopOpacity={0} />
+          </linearGradient>
+        </defs>
+        <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" vertical={false} />
+        <XAxis dataKey="month" tickFormatter={shortMonth} tickLine={false} axisLine={false} minTickGap={24} />
+        <YAxis tickFormatter={(v: number) => currency(v, true)} tickLine={false} axisLine={false} width={54} />
+        <Tooltip
+          formatter={(v: number) => [currency(v), 'Book value']}
+          labelFormatter={shortMonth}
+          contentStyle={{ background: 'rgba(15,23,41,0.95)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 12 }}
+          labelStyle={{ color: '#cbd5e1' }}
+        />
+        <Area type="monotone" dataKey="value" stroke="#22d3ee" strokeWidth={2.5} fill="url(#projFill)" />
+      </AreaChart>
+    </ResponsiveContainer>
+  );
+}
+
 export function StatusDonut({ data }: { data: { status: string; count: number }[] }) {
   return (
     <ResponsiveContainer width="100%" height={260}>

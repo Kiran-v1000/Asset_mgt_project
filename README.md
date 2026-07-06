@@ -15,6 +15,11 @@ data model and a full audit trail.
 | Area | What's included |
 |------|-----------------|
 | **Dashboard** | Executive KPIs, utilization, portfolio value, status & category charts, expiring warranties, live activity feed |
+| **AI Smart Insights** | Predictive failure-risk watchlist, AI procurement recommendations, 24-month book-value projection |
+| **Command Palette (⌘K)** | Global fuzzy search + jump-to across assets, people, vendors & pages |
+| **Notifications** | Live center: expiring warranties, overdue returns, pending approvals |
+| **Self-Service Portal** | "My Workspace" — my assets, raise requests, report damage |
+| **Reservations** | Reserve available assets for a future date; atomic status sync |
 | **Asset Management** | Registry with filters, lifecycle status, condition, QR/barcode tokens, depreciation, assign/return |
 | **Assignments** | Atomic check-out / return that keeps asset status in sync |
 | **Procurement & People** | Vendors, employees, self-service asset requests |
